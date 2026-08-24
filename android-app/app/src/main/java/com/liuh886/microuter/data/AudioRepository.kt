@@ -103,6 +103,16 @@ class AudioRepository(
     fun diagnosticReport(): String =
         reportBuilder.build(refresh(), logger.export())
 
+    fun beginLink(device: AudioDeviceInfo): Boolean {
+        controller.setMode(AudioManager.MODE_IN_COMMUNICATION)
+        return controller.select(device)
+    }
+
+    fun endLink() {
+        controller.clear()
+        controller.setMode(AudioManager.MODE_NORMAL)
+    }
+
     private fun mode(): Int =
         appContext.getSystemService(AudioManager::class.java).mode
 }

@@ -124,12 +124,24 @@ fun DashboardScreen(repository: AudioRepository) {
         item {
             GlassCard {
                 state.outputs.forEachIndexed { index, device ->
+                    val isActive = commDevice?.id == device.id
                     ListRow(
                         title = device.name,
                         subtitle = device.typeLabel,
                         leading = { DeviceGlyph(device.type) },
-                        showDivider = index < state.outputs.lastIndex
-                    )
+                        showDivider = index < state.outputs.lastIndex,
+                        onClick = if (device.isCommunicationCandidate) {
+                            { viewModel.select(device) }
+                        } else {
+                            null
+                        }
+                    ) {
+                        if (isActive) {
+                            CheckTrailing()
+                        } else if (device.isCommunicationCandidate) {
+                            PillAction("Use") { viewModel.select(device) }
+                        }
+                    }
                 }
             }
         }

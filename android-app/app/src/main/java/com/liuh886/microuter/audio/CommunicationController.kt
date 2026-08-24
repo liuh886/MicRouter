@@ -17,4 +17,8 @@ class CommunicationController(context: Context) {
     fun clear() {
         audioManager.clearCommunicationDevice()
     }
+
+    fun setMode(mode: Int) {
+        audioManager.mode = mode
+    }
 }

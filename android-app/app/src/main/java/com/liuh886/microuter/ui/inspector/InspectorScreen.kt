@@ -88,7 +88,7 @@ fun InspectorScreen(repository: AudioRepository) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                items(events, key = { it.timestampMs to it.kind }) { event ->
+                items(events, key = { it.seq }) { event ->
                     EventCard(event)
                 }
             }

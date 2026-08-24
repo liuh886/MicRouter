@@ -30,7 +30,7 @@ class RouteMonitor(context: Context) {
     private var started = false
 
     private fun emit(kind: RouteEventKind, message: String) {
-        _events.tryEmit(RouteEvent(System.currentTimeMillis(), kind, message))
+        _events.tryEmit(RouteEvent.create(System.currentTimeMillis(), kind, message))
     }
 
     private fun formatDevice(device: AudioDeviceInfo): String {

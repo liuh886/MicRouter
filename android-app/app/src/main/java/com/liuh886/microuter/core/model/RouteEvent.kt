@@ -1,5 +1,7 @@
 package com.liuh886.microuter.core.model
 
+import java.util.concurrent.atomic.AtomicLong
+
 enum class RouteEventKind {
     DEVICE_ADDED,
     DEVICE_REMOVED,
@@ -8,6 +10,7 @@ enum class RouteEventKind {
 }
 
 data class RouteEvent(
+    val seq: Long,
     val timestampMs: Long,
     val kind: RouteEventKind,
     val message: String
@@ -19,4 +22,11 @@ data class RouteEvent(
             RouteEventKind.MODE_CHANGED -> "Audio mode changed"
             RouteEventKind.COMMUNICATION_DEVICE_CHANGED -> "Communication device changed"
         }
+
+    companion object {
+        private val counter = AtomicLong(0)
+
+        fun create(timestampMs: Long, kind: RouteEventKind, message: String): RouteEvent =
+            RouteEvent(counter.incrementAndGet(), timestampMs, kind, message)
+    }
 }

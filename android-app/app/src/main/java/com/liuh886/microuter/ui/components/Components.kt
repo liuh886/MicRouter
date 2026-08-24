@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
@@ -202,7 +203,14 @@ fun LevelTrack(level: Float) {
                 .fillMaxWidth(animated)
                 .height(10.dp)
                 .clip(RoundedCornerShape(percent = 50))
-                .background(MaterialTheme.colorScheme.primary)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiary
+                        )
+                    )
+                )
         )
     }
 }
