@@ -34,11 +34,14 @@ app/src/main/java/com/liuh886/microuter/
 │   ├── DiagnosticReportBuilder.kt  Full report: device + snapshot + inventory + log
 │   └── AudioRepository.kt       Facade: state/events flows + control actions
 └── ui/
-    ├── RootScaffold.kt          Bottom navigation (Dashboard/Inspector/MicTest)
-    ├── theme/Theme.kt           Material 3 + dynamic color
-    ├── dashboard/               Status cards + per-device "Use for calls"
-    ├── inspector/               Route timeline + copy/share export
-    └── mictest/                 Input picker + live level meter
+    ├── RootScaffold.kt          Bottom navigation (translucent glass bar)
+    ├── theme/Theme.kt           Apple-style palette, iOS type scale, shapes
+    ├── theme/Glass.kt           AppBackdrop (blurred color blobs) + GlassCard
+    ├── components/Components.kt Inset-group kit: ListRow, pills, capsule button,
+    │                            device glyphs, level track, pulsing dot
+    ├── dashboard/               Large title + glass status hero + grouped lists
+    ├── inspector/               Route timeline as glass event cards
+    └── mictest/                 Session card + level meter + checkmark picker
 ```
 
 ## Permissions

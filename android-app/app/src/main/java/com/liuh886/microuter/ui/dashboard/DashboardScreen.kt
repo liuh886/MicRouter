@@ -1,20 +1,17 @@
 package com.liuh886.microuter.ui.dashboard
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -23,6 +20,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewModelScope
 import com.liuh886.microuter.core.model.AudioDeviceItem
 import com.liuh886.microuter.data.AudioRepository
+import com.liuh886.microuter.ui.components.CheckTrailing
+import com.liuh886.microuter.ui.components.DeviceGlyph
+import com.liuh886.microuter.ui.components.GroupHeader
+import com.liuh886.microuter.ui.components.ListRow
+import com.liuh886.microuter.ui.components.PillAction
+import com.liuh886.microuter.ui.components.StatusPill
+import com.liuh886.microuter.ui.theme.GlassCard
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -52,78 +56,101 @@ class DashboardViewModel(private val repository: AudioRepository) : ViewModel() 
 fun DashboardScreen(repository: AudioRepository) {
     val viewModel: DashboardViewModel = viewModel { DashboardViewModel(repository) }
     val state by viewModel.status.collectAsStateWithLifecycle()
+    val commDevice = state.communicationDevice
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 8.dp)
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Audio mode", style = MaterialTheme.typography.labelMedium)
-                    Text(state.modeLabel, style = MaterialTheme.typography.titleLarge)
-                    if (state.isBluetoothCommunication) {
-                        Text(
-                            "Bluetooth headset owns call audio",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.tertiary
-                        )
+            Text(
+                "MicRouter",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
+            )
+        }
+        item {
+            GlassCard {
+                ListRow(
+                    title = "Audio Mode",
+                    subtitle = if (state.isBluetoothCommunication) "Bluetooth owns call audio" else null,
+                    showDivider = true
+                ) {
+                    StatusPill(
+                        text = state.modeLabel.substringBefore(' '),
+                        color = if (state.isBluetoothCommunication) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
+                ListRow(
+                    title = commDevice?.name ?: "System Default",
+                    subtitle = commDevice?.typeLabel ?: "Android is choosing automatically",
+                    leading = { commDevice?.let { DeviceGlyph(it.type) } },
+                    showDivider = false
+                ) {
+                    ValuePill(active = commDevice != null)
+                }
+            }
+        }
+        item { GroupHeader("Inputs") }
+        item {
+            GlassCard {
+                state.inputs.forEachIndexed { index, device ->
+                    ListRow(
+                        title = device.name,
+                        subtitle = device.typeLabel,
+                        leading = { DeviceGlyph(device.type) },
+                        showDivider = index < state.inputs.lastIndex,
+                        onClick = if (device.isCommunicationCandidate) {
+                            { viewModel.select(device) }
+                        } else {
+                            null
+                        }
+                    ) {
+                        if (device.isCommunicationCandidate) {
+                            PillAction("Use") { viewModel.select(device) }
+                        } else if (device.id == commDevice?.id) {
+                            CheckTrailing()
+                        }
                     }
                 }
             }
         }
+        item { GroupHeader("Outputs") }
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Active communication device", style = MaterialTheme.typography.labelMedium)
-                    Text(
-                        state.communicationDevice?.let { "${it.name} (${it.typeLabel})" } ?: "System default",
-                        style = MaterialTheme.typography.titleMedium
+            GlassCard {
+                state.outputs.forEachIndexed { index, device ->
+                    ListRow(
+                        title = device.name,
+                        subtitle = device.typeLabel,
+                        leading = { DeviceGlyph(device.type) },
+                        showDivider = index < state.outputs.lastIndex
                     )
                 }
             }
         }
         item {
-            Text("Inputs", style = MaterialTheme.typography.titleMedium)
-        }
-        items(state.inputs, key = { it.id }) { device ->
-            DeviceRow(device) {
-                viewModel.select(device)
-            }
-        }
-        item {
-            Text("Outputs", style = MaterialTheme.typography.titleMedium)
-        }
-        items(state.outputs, key = { it.id }) { device ->
-            DeviceRow(device) { }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = { viewModel.clear() }) { Text("Reset to system default") }
+            Box(Modifier.fillParentMaxWidth(), contentAlignment = Alignment.Center) {
+                TextButton(onClick = { viewModel.clear() }) {
+                    Text("Reset to System Default")
+                }
             }
         }
     }
 }
 
 @Composable
-private fun DeviceRow(device: AudioDeviceItem, onSelect: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(device.name, style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    device.typeLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (device.isCommunicationCandidate) {
-                TextButton(onClick = onSelect) { Text("Use for calls") }
-            }
+private fun ValuePill(active: Boolean) {
+    StatusPill(
+        text = if (active) "Active" else "Auto",
+        color = if (active) {
+            MaterialTheme.colorScheme.tertiary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
         }
-    }
+    )
 }

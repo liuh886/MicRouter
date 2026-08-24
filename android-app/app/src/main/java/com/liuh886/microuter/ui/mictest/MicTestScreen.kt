@@ -1,25 +1,21 @@
 package com.liuh886.microuter.ui.mictest
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -29,9 +25,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liuh886.microuter.audio.MicTester
 import com.liuh886.microuter.core.model.AudioDeviceItem
 import com.liuh886.microuter.data.AudioRepository
+import com.liuh886.microuter.ui.components.CapsuleButton
+import com.liuh886.microuter.ui.components.CheckTrailing
+import com.liuh886.microuter.ui.components.DeviceGlyph
+import com.liuh886.microuter.ui.components.GroupHeader
+import com.liuh886.microuter.ui.components.LevelTrack
+import com.liuh886.microuter.ui.components.ListRow
+import com.liuh886.microuter.ui.theme.GlassCard
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class MicTestViewModel(
     private val repository: AudioRepository,
@@ -117,64 +121,90 @@ fun MicTestScreen(
 ) {
     val viewModel: MicTestViewModel = viewModel { MicTestViewModel(repository, tester) }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val selected = state.selected
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("Microphone test", style = MaterialTheme.typography.titleLarge)
+        Text(
+            "Mic Test",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+        )
         if (!micPermissionGranted) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlassCard(cornerRadius = 16.dp) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Microphone permission required", style = MaterialTheme.typography.titleSmall)
-                    Button(onClick = onRequestMicPermission) { Text("Grant permission") }
+                    CapsuleButton("Grant Permission") { onRequestMicPermission() }
                 }
             }
         }
         state.error?.let {
-            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-        }
-        LevelMeter(level = state.level, enabled = state.running)
-        state.sessionInfo?.let {
             Text(
-                "${it.sampleRate} Hz · ${it.channelCount} ch · preferred device ${if (it.preferredDeviceApplied) "applied" else "not applied"}",
+                it,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 4.dp)
             )
         }
-        Button(
-            onClick = { viewModel.toggle() },
-            enabled = micPermissionGranted
-        ) {
-            Text(if (state.running) "Stop" else "Start")
+        GlassCard(cornerRadius = 20.dp) {
+            ListRow(
+                title = selected?.name ?: "No input selected",
+                subtitle = selected?.typeLabel ?: "Choose a device below",
+                leading = { selected?.let { d -> DeviceGlyph(d.type) } },
+                showDivider = true
+            ) {
+                if (state.running) {
+                    RunningBadge()
+                }
+            }
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Level", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "${(state.level * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                LevelTrack(if (state.running) state.level else 0f)
+            }
+            state.sessionInfo?.let { info ->
+                ListRow(
+                    title = "Session",
+                    subtitle = "${info.sampleRate} Hz · ${info.channelCount} ch · preferred device ${if (info.preferredDeviceApplied) "applied" else "rejected"}",
+                    showDivider = false
+                )
+            } ?: ListRow(title = "Session", subtitle = "Idle", showDivider = false)
         }
-        Text("Input devices", style = MaterialTheme.typography.titleMedium)
+        CapsuleButton(
+            text = if (state.running) "Stop" else "Start",
+            enabled = micPermissionGranted
+        ) { viewModel.toggle() }
+        GroupHeader("Input Devices")
         LazyColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            items(state.inputs, key = { it.id }) { device ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable { viewModel.select(device) }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text(device.name, style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                device.typeLabel,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (state.selected?.id == device.id) {
-                            Text(
-                                "Selected",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+            item {
+                GlassCard(cornerRadius = 20.dp) {
+                    state.inputs.forEachIndexed { index, device ->
+                        ListRow(
+                            title = device.name,
+                            subtitle = device.typeLabel,
+                            leading = { DeviceGlyph(device.type) },
+                            showDivider = index < state.inputs.lastIndex,
+                            onClick = { viewModel.select(device) }
+                        ) {
+                            if (selected?.id == device.id) {
+                                CheckTrailing()
+                            }
                         }
                     }
                 }
@@ -184,22 +214,14 @@ fun MicTestScreen(
 }
 
 @Composable
-private fun LevelMeter(level: Float, enabled: Boolean) {
-    val animated by animateFloatAsState(targetValue = if (enabled) level else 0f, label = "level")
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(20.dp)
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(10.dp)
-            )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(animated.coerceIn(0f, 1f))
-                .height(20.dp)
-                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(10.dp))
+private fun RunningBadge() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            "Recording",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary
         )
+        Spacer(Modifier.padding(start = 4.dp))
+        PulsingDot()
     }
 }
