@@ -5,27 +5,16 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 
 class CommunicationController(context: Context) {
+
     private val audioManager = context.getSystemService(AudioManager::class.java)
 
-    fun current(): AudioDeviceInfo? {
-        return if (android.os.Build.VERSION.SDK_INT >= 31) {
-            audioManager.communicationDevice
-        } else {
-            null
-        }
-    }
+    fun current(): AudioDeviceInfo? = audioManager.communicationDevice
 
-    fun select(device: AudioDeviceInfo): Boolean {
-        return if (android.os.Build.VERSION.SDK_INT >= 31) {
-            audioManager.setCommunicationDevice(device)
-        } else {
-            false
-        }
-    }
+    fun candidates(): List<AudioDeviceInfo> = audioManager.availableCommunicationDevices
+
+    fun select(device: AudioDeviceInfo): Boolean = audioManager.setCommunicationDevice(device)
 
     fun clear() {
-        if (android.os.Build.VERSION.SDK_INT >= 31) {
-            audioManager.clearCommunicationDevice()
-        }
+        audioManager.clearCommunicationDevice()
     }
 }
