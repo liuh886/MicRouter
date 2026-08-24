@@ -2,6 +2,7 @@ package com.liuh886.microuter.ui.dashboard
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -11,6 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -20,11 +24,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewModelScope
 import com.liuh886.microuter.core.model.AudioDeviceItem
 import com.liuh886.microuter.data.AudioRepository
-import com.liuh886.microuter.ui.components.CheckTrailing
+import com.liuh886.microuter.ui.components.Chevron
 import com.liuh886.microuter.ui.components.DeviceGlyph
+import com.liuh886.microuter.ui.components.DevicePickerSheet
 import com.liuh886.microuter.ui.components.GroupHeader
 import com.liuh886.microuter.ui.components.ListRow
-import com.liuh886.microuter.ui.components.PillAction
 import com.liuh886.microuter.ui.components.StatusPill
 import com.liuh886.microuter.ui.theme.GlassCard
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +47,14 @@ class DashboardViewModel(private val repository: AudioRepository) : ViewModel() 
         }
     }
 
-    fun select(device: AudioDeviceItem) {
+    fun chooseInput(device: AudioDeviceItem) {
+        repository.selectInput(device)
+        if (device.isCommunicationCandidate) {
+            repository.selectCommunicationDevice(device.id)
+        }
+    }
+
+    fun chooseOutput(device: AudioDeviceItem) {
         repository.selectCommunicationDevice(device.id)
     }
 
@@ -56,6 +67,9 @@ class DashboardViewModel(private val repository: AudioRepository) : ViewModel() 
 fun DashboardScreen(repository: AudioRepository) {
     val viewModel: DashboardViewModel = viewModel { DashboardViewModel(repository) }
     val state by viewModel.status.collectAsStateWithLifecycle()
+    val selectedInput by repository.selectedInput.collectAsStateWithLifecycle()
+    var showInputSheet by remember { mutableStateOf(false) }
+    var showOutputSheet by remember { mutableStateOf(false) }
     val commDevice = state.communicationDevice
 
     LazyColumn(
@@ -73,75 +87,46 @@ fun DashboardScreen(repository: AudioRepository) {
         item {
             GlassCard {
                 ListRow(
-                    title = "Audio Mode",
-                    subtitle = if (state.isBluetoothCommunication) "Bluetooth owns call audio" else null,
-                    showDivider = true
+                    title = "Input",
+                    subtitle = selectedInput?.typeLabel ?: "Tap to choose test input",
+                    leading = { selectedInput?.let { DeviceGlyph(it.type) } },
+                    showDivider = true,
+                    onClick = { showInputSheet = true }
+                ) {
+                    Text(
+                        selectedInput?.name ?: "Choose",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Chevron()
+                }
+                ListRow(
+                    title = "Output · Calls",
+                    subtitle = commDevice?.typeLabel ?: "Android chooses automatically",
+                    leading = { commDevice?.let { DeviceGlyph(it.type) } },
+                    showDivider = true,
+                    onClick = { showOutputSheet = true }
+                ) {
+                    Text(
+                        commDevice?.name ?: "Auto",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Chevron()
+                }
+                ListRow(
+                    title = "System",
+                    subtitle = "Mode: ${state.modeLabel}",
+                    showDivider = false
                 ) {
                     StatusPill(
-                        text = state.modeLabel.substringBefore(' '),
+                        text = if (state.isBluetoothCommunication) "BT call" else "Auto",
                         color = if (state.isBluetoothCommunication) {
                             MaterialTheme.colorScheme.tertiary
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         }
                     )
-                }
-                ListRow(
-                    title = commDevice?.name ?: "System Default",
-                    subtitle = commDevice?.typeLabel ?: "Android is choosing automatically",
-                    leading = { commDevice?.let { DeviceGlyph(it.type) } },
-                    showDivider = false
-                ) {
-                    ValuePill(active = commDevice != null)
-                }
-            }
-        }
-        item { GroupHeader("Inputs") }
-        item {
-            GlassCard {
-                state.inputs.forEachIndexed { index, device ->
-                    ListRow(
-                        title = device.name,
-                        subtitle = device.typeLabel,
-                        leading = { DeviceGlyph(device.type) },
-                        showDivider = index < state.inputs.lastIndex,
-                        onClick = if (device.isCommunicationCandidate) {
-                            { viewModel.select(device) }
-                        } else {
-                            null
-                        }
-                    ) {
-                        if (device.isCommunicationCandidate) {
-                            PillAction("Use") { viewModel.select(device) }
-                        } else if (device.id == commDevice?.id) {
-                            CheckTrailing()
-                        }
-                    }
-                }
-            }
-        }
-        item { GroupHeader("Outputs") }
-        item {
-            GlassCard {
-                state.outputs.forEachIndexed { index, device ->
-                    val isActive = commDevice?.id == device.id
-                    ListRow(
-                        title = device.name,
-                        subtitle = device.typeLabel,
-                        leading = { DeviceGlyph(device.type) },
-                        showDivider = index < state.outputs.lastIndex,
-                        onClick = if (device.isCommunicationCandidate) {
-                            { viewModel.select(device) }
-                        } else {
-                            null
-                        }
-                    ) {
-                        if (isActive) {
-                            CheckTrailing()
-                        } else if (device.isCommunicationCandidate) {
-                            PillAction("Use") { viewModel.select(device) }
-                        }
-                    }
                 }
             }
         }
@@ -152,17 +137,52 @@ fun DashboardScreen(repository: AudioRepository) {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ValuePill(active: Boolean) {
-    StatusPill(
-        text = if (active) "Active" else "Auto",
-        color = if (active) {
-            MaterialTheme.colorScheme.tertiary
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
+        item { GroupHeader("All Devices") }
+        item {
+            GlassCard {
+                val all = state.inputs.filter { it.isSource } + state.outputs.filter { it.isSink }
+                all.forEachIndexed { index, device ->
+                    ListRow(
+                        title = device.name,
+                        subtitle = device.typeLabel +
+                            if (device.isCommunicationCandidate) " · controllable" else "",
+                        leading = { DeviceGlyph(device.type) },
+                        showDivider = index < all.lastIndex
+                    ) {
+                        if (device.id == commDevice?.id) {
+                            StatusPill("Active", MaterialTheme.colorScheme.tertiary)
+                        }
+                    }
+                }
+            }
         }
-    )
+    }
+    if (showInputSheet) {
+        DevicePickerSheet(
+            title = "Choose Input",
+            devices = state.inputs.filter { it.isSource },
+            selectedId = selectedInput?.id,
+            allowPick = { it.recordable },
+            disabledTag = "not recordable",
+            onPick = { device ->
+                viewModel.chooseInput(device)
+                showInputSheet = false
+            },
+            onDismiss = { showInputSheet = false }
+        )
+    }
+    if (showOutputSheet) {
+        DevicePickerSheet(
+            title = "Call Output Route",
+            devices = state.outputs,
+            selectedId = commDevice?.id,
+            allowPick = { it.isCommunicationCandidate },
+            disabledTag = "fixed",
+            onPick = { device ->
+                viewModel.chooseOutput(device)
+                showOutputSheet = false
+            },
+            onDismiss = { showOutputSheet = false }
+        )
+    }
 }

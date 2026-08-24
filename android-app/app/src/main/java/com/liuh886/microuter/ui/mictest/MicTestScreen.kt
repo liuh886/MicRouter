@@ -194,8 +194,10 @@ fun MicTestScreen(
     if (showInputSheet) {
         DevicePickerSheet(
             title = "Choose Input — switches live",
-            devices = state.inputs,
+            devices = state.inputs.filter { it.isSource },
             selectedId = selected?.id,
+            allowPick = { it.recordable },
+            disabledTag = "not recordable",
             onPick = { device ->
                 viewModel.selectDevice(device)
                 showInputSheet = false

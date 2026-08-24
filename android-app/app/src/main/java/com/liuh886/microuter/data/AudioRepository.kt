@@ -36,6 +36,13 @@ class AudioRepository(
     private val _events = MutableStateFlow<List<RouteEvent>>(emptyList())
     val events: StateFlow<List<RouteEvent>> = _events.asStateFlow()
 
+    private val _selectedInput = MutableStateFlow<AudioDeviceItem?>(null)
+    val selectedInput: StateFlow<AudioDeviceItem?> = _selectedInput.asStateFlow()
+
+    fun selectInput(item: AudioDeviceItem) {
+        _selectedInput.value = item
+    }
+
     private var started = false
 
     fun start() {

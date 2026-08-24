@@ -30,18 +30,15 @@ class MicTestViewModel(
         val systemComm: AudioDeviceItem? = null
     )
 
-    private val _uiState = MutableStateFlow(
-        UiState(
-            inputs = repository.state.value.inputs,
-            outputs = repository.state.value.outputs,
-            selected = repository.state.value.inputs.firstOrNull {
-                it.type == AudioDeviceInfo.TYPE_BUILTIN_MIC
-            }
-        )
-    )
+    private val _uiState = MutableStateFlow(UiState(selected = repository.selectedInput.value))
     val uiState = _uiState.asStateFlow()
 
     init {
+        if (repository.selectedInput.value == null) {
+            repository.state.value.inputs
+                .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_MIC }
+                ?.let { repository.selectInput(it) }
+        }
         viewModelScope.launch {
             repository.state.collect { state ->
                 _uiState.update { current ->
@@ -49,30 +46,31 @@ class MicTestViewModel(
                         inputs = state.inputs,
                         outputs = state.outputs,
                         modeLabel = state.modeLabel,
-                        systemComm = state.communicationDevice,
-                        selected = current.selected?.let { sel ->
-                            state.inputs.firstOrNull { it.id == sel.id }
-                        }
+                        systemComm = state.communicationDevice
                     )
+                }
+            }
+        }
+        viewModelScope.launch {
+            repository.selectedInput.collect { device ->
+                if (device != null) {
+                    _uiState.update { it.copy(selected = device, error = null) }
+                    if (_uiState.value.running) {
+                        repository.resolveInputDevice(device.id)?.let { info ->
+                            tester.switch(MicTester.Config(info, resolveMonitor()))
+                        }
+                    }
                 }
             }
         }
     }
 
-    fun selectOutput(device: AudioDeviceItem) {
-        repository.selectCommunicationDevice(device.id)
+    fun selectDevice(device: AudioDeviceItem) {
+        repository.selectInput(device)
     }
 
-    fun selectDevice(device: AudioDeviceItem) {
-        _uiState.update { it.copy(selected = device, error = null) }
-        if (_uiState.value.running) {
-            val info = repository.resolveInputDevice(device.id)
-            if (info != null) {
-                tester.switch(MicTester.Config(info, resolveMonitor()))
-            } else {
-                _uiState.update { it.copy(error = "Device is no longer available") }
-            }
-        }
+    fun selectOutput(device: AudioDeviceItem) {
+        repository.selectCommunicationDevice(device.id)
     }
 
     fun toggleRun() {

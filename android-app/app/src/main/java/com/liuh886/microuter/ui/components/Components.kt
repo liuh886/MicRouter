@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -48,6 +49,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothAudio
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Dock
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
@@ -304,6 +306,8 @@ fun DevicePickerSheet(
     title: String,
     devices: List<AudioDeviceItem>,
     selectedId: Int?,
+    allowPick: (AudioDeviceItem) -> Boolean = { true },
+    disabledTag: String = "system-only",
     onPick: (AudioDeviceItem) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -321,24 +325,46 @@ fun DevicePickerSheet(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
             )
             devices.forEach { device ->
-                ListRow(
-                    title = device.name,
-                    subtitle = device.typeLabel,
-                    leading = { DeviceGlyph(device.type) },
-                    showDivider = device !== devices.last(),
-                    onClick = { onPick(device) }
-                ) {
-                    if (device.id == selectedId) {
-                        CheckTrailing()
-                    } else if (device.isCommunicationCandidate) {
-                        Text(
-                            "controllable",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.tertiary
-                        )
+                val allowed = allowPick(device)
+                Row(modifier = Modifier.alpha(if (allowed) 1f else 0.45f)) {
+                    ListRow(
+                        title = device.name,
+                        subtitle = device.typeLabel,
+                        leading = { DeviceGlyph(device.type) },
+                        showDivider = device !== devices.last(),
+                        onClick = if (allowed) {
+                            { onPick(device) }
+                        } else {
+                            null
+                        }
+                    ) {
+                        if (device.id == selectedId) {
+                            CheckTrailing()
+                        } else if (!allowed) {
+                            Text(
+                                disabledTag,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else if (device.isCommunicationCandidate) {
+                            Text(
+                                "controllable",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+fun Chevron() {
+    Icon(
+        Icons.Filled.ChevronRight,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }

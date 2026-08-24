@@ -11,8 +11,21 @@ data class AudioDeviceItem(
     val address: String,
     val isSource: Boolean,
     val isSink: Boolean,
-    val isCommunicationCandidate: Boolean
+    val isCommunicationCandidate: Boolean,
+    val recordable: Boolean
 )
+
+val Int.isRecordableInputType: Boolean
+    get() = when (this) {
+        AudioDeviceInfo.TYPE_BUILTIN_MIC,
+        AudioDeviceInfo.TYPE_WIRED_HEADSET,
+        AudioDeviceInfo.TYPE_USB_DEVICE,
+        AudioDeviceInfo.TYPE_USB_HEADSET,
+        AudioDeviceInfo.TYPE_USB_ACCESSORY,
+        AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+        AudioDeviceInfo.TYPE_BLE_HEADSET -> true
+        else -> false
+    }
 
 val Int.audioTypeLabel: String
     get() = when (this) {
@@ -54,6 +67,7 @@ fun AudioDeviceInfo.toItem(isCommunicationCandidate: Boolean = false): AudioDevi
         address = location,
         isSource = isSource,
         isSink = isSink,
-        isCommunicationCandidate = isCommunicationCandidate
+        isCommunicationCandidate = isCommunicationCandidate,
+        recordable = isSource && type.isRecordableInputType
     )
 }
