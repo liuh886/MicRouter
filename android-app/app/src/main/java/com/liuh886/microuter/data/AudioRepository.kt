@@ -105,7 +105,25 @@ class AudioRepository(
 
     fun beginLink(device: AudioDeviceInfo): Boolean {
         controller.setMode(AudioManager.MODE_IN_COMMUNICATION)
-        return controller.select(device)
+        val selected = controller.select(device)
+        if (!selected) {
+            controller.setMode(AudioManager.MODE_NORMAL)
+            return false
+        }
+        val isBtTarget = device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+            device.type == AudioDeviceInfo.TYPE_BLE_HEADSET
+        if (!isBtTarget) return true
+        val deadline = android.os.SystemClock.elapsedRealtime() + LINK_CONFIRM_TIMEOUT_MS
+        while (android.os.SystemClock.elapsedRealtime() < deadline) {
+            val current = controller.current()
+            if (current != null && (current.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                    current.type == AudioDeviceInfo.TYPE_BLE_HEADSET)
+            ) {
+                return true
+            }
+            Thread.sleep(100)
+        }
+        return false
     }
 
     fun endLink() {
@@ -115,4 +133,8 @@ class AudioRepository(
 
     private fun mode(): Int =
         appContext.getSystemService(AudioManager::class.java).mode
+
+    private companion object {
+        const val LINK_CONFIRM_TIMEOUT_MS = 2_000L
+    }
 }

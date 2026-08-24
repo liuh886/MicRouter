@@ -23,10 +23,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.liuh886.microuter.core.model.AudioDeviceItem
 import com.liuh886.microuter.ui.theme.AppPalette
 import com.liuh886.microuter.ui.theme.Hairline
 import android.media.AudioDeviceInfo
@@ -292,4 +296,49 @@ fun PulsingDot(color: Color = MaterialTheme.colorScheme.primary) {
         label = "pulseAlpha"
     )
     Box(Modifier.size(8.dp).background(color.copy(alpha = alpha), CircleShape))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DevicePickerSheet(
+    title: String,
+    devices: List<AudioDeviceItem>,
+    selectedId: Int?,
+    onPick: (AudioDeviceItem) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(Modifier.padding(bottom = 24.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+            )
+            devices.forEach { device ->
+                ListRow(
+                    title = device.name,
+                    subtitle = device.typeLabel,
+                    leading = { DeviceGlyph(device.type) },
+                    showDivider = device !== devices.last(),
+                    onClick = { onPick(device) }
+                ) {
+                    if (device.id == selectedId) {
+                        CheckTrailing()
+                    } else if (device.isCommunicationCandidate) {
+                        Text(
+                            "controllable",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

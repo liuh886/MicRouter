@@ -21,7 +21,12 @@ class MicRouterApp : Application() {
     val eventLogger: RouteEventLogger by lazy { RouteEventLogger() }
     val micTester: MicTester by lazy {
         MicTester { device ->
-            if (device != null) audioRepository.beginLink(device) else audioRepository.endLink()
+            if (device != null) {
+                audioRepository.beginLink(device)
+            } else {
+                audioRepository.endLink()
+                true
+            }
         }
     }
     val audioRepository: AudioRepository by lazy {

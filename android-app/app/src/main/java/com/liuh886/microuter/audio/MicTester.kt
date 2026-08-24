@@ -7,9 +7,10 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import com.liuh886.microuter.core.model.audioTypeLabel
 
 class MicTester(
-    private val linkController: (AudioDeviceInfo?) -> Unit
+    private val linkController: (AudioDeviceInfo?) -> Boolean
 ) {
 
     data class SessionInfo(
@@ -17,7 +18,9 @@ class MicTester(
         val channelCount: Int,
         val preferredDeviceApplied: Boolean,
         val sourceLabel: String,
-        val monitorOutputName: String?
+        val monitorOutputName: String?,
+        val linkConfirmed: Boolean? = null,
+        val routedDeviceName: String? = null
     )
 
     data class Config(
@@ -132,6 +135,10 @@ class MicTester(
                 }
                 val rms = kotlin.math.sqrt(sum / read)
                 val level = (rms * LEVEL_GAIN).toFloat().coerceIn(0f, 1f)
+                val routedNow = routedLabel(rec.routedDevice)
+                if (routedNow != currentInfo.routedDeviceName) {
+                    currentInfo = currentInfo.copy(routedDeviceName = routedNow)
+                }
                 synchronized(lock) { track }?.write(buffer, 0, read)
                 onLevel(level, currentInfo)
             }
@@ -164,14 +171,13 @@ class MicTester(
     @SuppressLint("MissingPermission")
     private fun openSetup(cfg: Config): Setup? {
         val isBt = cfg.isBluetoothDevice()
+        var linkOk: Boolean? = null
         if (isBt) {
-            linkController(cfg.device)
+            linkOk = linkController(cfg.device)
         }
         val rate = if (isBt) 16_000 else 48_000
-        val rec = openRecord(
-            MediaRecorder.AudioSource.VOICE_COMMUNICATION, rate,
-            AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, 2048
-        )
+        val source = if (isBt) MediaRecorder.AudioSource.VOICE_COMMUNICATION else MediaRecorder.AudioSource.MIC
+        val rec = openRecord(source, rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, 2048)
         if (rec == null) {
             if (isBt) linkController(null)
             return null
@@ -215,12 +221,21 @@ class MicTester(
                 sampleRate = rate,
                 channelCount = 1,
                 preferredDeviceApplied = preferred,
-                sourceLabel = "VOICE_COMMUNICATION",
-                monitorOutputName = monitorName
+                sourceLabel = sourceLabel(source),
+                monitorOutputName = monitorName,
+                linkConfirmed = linkOk,
+                routedDeviceName = routedLabel(rec.routedDevice)
             ),
             isBluetooth = isBt
         )
     }
+
+    private fun routedLabel(device: AudioDeviceInfo?): String? = device?.let {
+        it.productName?.toString().orEmpty().ifBlank { it.type.audioTypeLabel }
+    }
+
+    private fun sourceLabel(source: Int): String =
+        if (source == MediaRecorder.AudioSource.VOICE_COMMUNICATION) "VOICE_COMMUNICATION" else "MIC"
 
     private fun closeSetup(setup: Setup) {
         synchronized(lock) {

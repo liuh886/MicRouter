@@ -9,11 +9,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -24,6 +30,7 @@ import com.liuh886.microuter.data.AudioRepository
 import com.liuh886.microuter.ui.components.CapsuleButton
 import com.liuh886.microuter.ui.components.CheckTrailing
 import com.liuh886.microuter.ui.components.DeviceGlyph
+import com.liuh886.microuter.ui.components.DevicePickerSheet
 import com.liuh886.microuter.ui.components.GroupHeader
 import com.liuh886.microuter.ui.components.LevelTrack
 import com.liuh886.microuter.ui.components.ListRow
@@ -41,6 +48,7 @@ fun MicTestScreen(
     val viewModel: MicTestViewModel = viewModel { MicTestViewModel(repository, tester) }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val selected = state.selected
+    var showInputSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -69,23 +77,33 @@ fun MicTestScreen(
                 )
             }
         }
-        GlassCard(cornerRadius = 20.dp) {
-            ListRow(
-                title = "System Route",
-                subtitle = "Mode: ${state.modeLabel}",
-                showDivider = true
-            ) {
-                Text(
-                    state.systemComm?.name ?: "Auto",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        GlassCard(cornerRadius = 24.dp) {
+            Column(Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(
+                        "LEVEL",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "${(state.level * 100).toInt()}%",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                LevelTrack(if (state.running) state.level else 0f)
             }
             ListRow(
-                title = selected?.name ?: "No input selected",
-                subtitle = selected?.typeLabel ?: "Pick a device below",
+                title = selected?.name ?: "Choose input device",
+                subtitle = selected?.typeLabel ?: "Tap to open the picker",
                 leading = { selected?.let { d -> DeviceGlyph(d.type) } },
-                showDivider = true
+                showDivider = true,
+                onClick = { showInputSheet = true }
             ) {
                 if (state.running) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -98,6 +116,11 @@ fun MicTestScreen(
                         )
                     }
                 }
+                Icon(
+                    Icons.Filled.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             ListRow(
                 title = "Ear Monitor 耳返",
@@ -113,48 +136,35 @@ fun MicTestScreen(
                     onCheckedChange = { viewModel.setEarMonitor(it) }
                 )
             }
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    Text("Level", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        "${(state.level * 100).toInt()}%",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                LevelTrack(if (state.running) state.level else 0f)
-            }
             ListRow(
-                title = "Session",
-                subtitle = sessionSubtitle(state),
+                title = "System Route",
+                subtitle = "Mode: ${state.modeLabel}",
                 showDivider = false
-            )
+            ) {
+                Text(
+                    state.systemComm?.name ?: "Auto",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         CapsuleButton(
             text = if (state.running) "Stop" else "Start",
             enabled = micPermissionGranted
         ) { viewModel.toggleRun() }
-        GroupHeader(
-            if (state.running) "Inputs — tap to switch live" else "Inputs"
-        )
-        GlassCard(cornerRadius = 20.dp) {
-            state.inputs.forEachIndexed { index, device ->
-                ListRow(
-                    title = device.name,
-                    subtitle = device.typeLabel,
-                    leading = { DeviceGlyph(device.type) },
-                    showDivider = index < state.inputs.lastIndex,
-                    onClick = { viewModel.selectDevice(device) }
-                ) {
-                    if (selected?.id == device.id) {
-                        CheckTrailing()
-                    }
-                }
+        GlassCard(cornerRadius = 16.dp) {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                Text(
+                    "SESSION",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    sessionSubtitle(state),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
         GroupHeader("Outputs — call route")
@@ -181,12 +191,25 @@ fun MicTestScreen(
             }
         }
     }
+    if (showInputSheet) {
+        DevicePickerSheet(
+            title = "Choose Input — switches live",
+            devices = state.inputs,
+            selectedId = selected?.id,
+            onPick = { device ->
+                viewModel.selectDevice(device)
+                showInputSheet = false
+            },
+            onDismiss = { showInputSheet = false }
+        )
+    }
 }
 
 private fun sessionSubtitle(state: MicTestViewModel.UiState): String {
-    val info = state.sessionInfo ?: return "Idle"
-    var text = "${info.sampleRate} Hz · ${info.sourceLabel}"
-    val monitor = info.monitorOutputName
-    if (monitor != null) text += " · ear→$monitor"
-    return text
+    val info = state.sessionInfo ?: return "Idle — press Start, then switch devices live"
+    val text = StringBuilder("${info.sampleRate} Hz · ${info.sourceLabel}")
+    info.routedDeviceName?.let { text.append(" · actual→").append(it) }
+    if (info.linkConfirmed == false) text.append(" · ⚠ SCO link unconfirmed")
+    info.monitorOutputName?.let { text.append(" · ear→").append(it) }
+    return text.toString()
 }
