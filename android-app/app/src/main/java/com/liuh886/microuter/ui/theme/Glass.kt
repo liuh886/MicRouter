@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -80,7 +81,7 @@ fun AppBackdrop(
 }
 
 @Composable
-private fun Blob(
+private fun BoxScope.Blob(
     color: Color,
     diameter: Dp,
     anchor: Alignment,

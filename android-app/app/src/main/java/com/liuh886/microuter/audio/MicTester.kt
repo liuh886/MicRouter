@@ -44,7 +44,7 @@ class MicTester {
         worker = Thread {
             val buffer = ShortArray(minBuffer)
             while (running) {
-                val read = rec.read(buffer, buffer.size)
+                val read = rec.read(buffer, 0, buffer.size)
                 if (read <= 0) continue
                 var sum = 0.0
                 for (i in 0 until read) {
@@ -52,7 +52,7 @@ class MicTester {
                     sum += v * v
                 }
                 val rms = kotlin.math.sqrt(sum / read)
-                val level = (rms * LEVEL_GAIN).coerceIn(0f, 1f)
+                val level = (rms * LEVEL_GAIN).toFloat().coerceIn(0f, 1f)
                 onLevel(level, info)
             }
         }.apply { start() }
