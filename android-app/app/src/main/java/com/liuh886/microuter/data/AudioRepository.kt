@@ -84,7 +84,7 @@ class AudioRepository(
             modeLabel = AudioSessionState.labelForMode(mode()),
             communicationDevice = current?.let { it.toItem(candidateIds.contains(it.id)) },
             inputs = scanner.inputDevices().map { it.toItem(candidateIds.contains(it.id)) },
-            outputs = scanner.outputDevices().map { it.toItem(false) },
+            outputs = scanner.outputDevices().map { it.toItem(candidateIds.contains(it.id)) },
             communicationCandidates = candidates.map { it.toItem(true) }
         )
         _state.value = state
