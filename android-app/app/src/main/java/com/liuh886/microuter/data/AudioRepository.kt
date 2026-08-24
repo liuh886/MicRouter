@@ -25,6 +25,7 @@ class AudioRepository(
     private val scope: CoroutineScope
 ) {
     private val appContext = context.applicationContext
+    private val reportBuilder = DiagnosticReportBuilder(appContext)
 
     private val deviceIndex = mutableMapOf<Int, AudioDeviceInfo>()
 
@@ -98,7 +99,8 @@ class AudioRepository(
     fun resolveInputDevice(itemId: Int): AudioDeviceInfo? =
         synchronized(deviceIndex) { deviceIndex[itemId] }
 
-    fun exportLog(): String = logger.export()
+    fun diagnosticReport(): String =
+        reportBuilder.build(refresh(), logger.export())
 
     private fun mode(): Int =
         appContext.getSystemService(AudioManager::class.java).mode

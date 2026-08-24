@@ -21,8 +21,8 @@ class RouteMonitor(context: Context) {
     private val mainExecutor = ContextCompat.getMainExecutor(context)
 
     private val _events = MutableSharedFlow<RouteEvent>(
-        replay = 0,
-        extraBufferCapacity = 64,
+        replay = REPLAY_CAPACITY,
+        extraBufferCapacity = REPLAY_CAPACITY,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     val events: SharedFlow<RouteEvent> = _events
@@ -78,5 +78,9 @@ class RouteMonitor(context: Context) {
         audioManager.unregisterAudioDeviceCallback(deviceCallback)
         audioManager.removeOnModeChangedListener(modeListener)
         audioManager.removeOnCommunicationDeviceChangedListener(communicationDeviceListener)
+    }
+
+    private companion object {
+        const val REPLAY_CAPACITY = 64
     }
 }

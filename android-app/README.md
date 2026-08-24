@@ -31,6 +31,7 @@ app/src/main/java/com/liuh886/microuter/
 │   └── MicTester.kt             AudioRecord self-test with RMS level meter
 ├── data/
 │   ├── RouteEventLogger.kt      Ring buffer + export text
+│   ├── DiagnosticReportBuilder.kt  Full report: device + snapshot + inventory + log
 │   └── AudioRepository.kt       Facade: state/events flows + control actions
 └── ui/
     ├── RootScaffold.kt          Bottom navigation (Dashboard/Inspector/MicTest)

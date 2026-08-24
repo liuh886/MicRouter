@@ -62,10 +62,10 @@ fun InspectorScreen(repository: AudioRepository) {
         ) {
             Text("Route timeline", style = MaterialTheme.typography.titleLarge)
             Row {
-                TextButton(onClick = { clipboard.setText(AnnotatedString(repository.exportLog())) }) {
+                TextButton(onClick = { clipboard.setText(AnnotatedString(repository.diagnosticReport())) }) {
                     Text("Copy")
                 }
-                TextButton(onClick = { shareLog(context, repository.exportLog()) }) {
+                TextButton(onClick = { shareLog(context, repository.diagnosticReport()) }) {
                     Text("Share")
                 }
             }
