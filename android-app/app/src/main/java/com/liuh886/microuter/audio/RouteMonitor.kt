@@ -33,22 +33,21 @@ class RouteMonitor(context: Context) {
         _events.tryEmit(RouteEvent(System.currentTimeMillis(), kind, message))
     }
 
+    private fun formatDevice(device: AudioDeviceInfo): String {
+        val name = device.productName?.toString().orEmpty().ifBlank { "Unknown" }
+        return "$name (${device.type.audioTypeLabel})"
+    }
+
     private val deviceCallback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
             addedDevices.forEach { device ->
-                emit(
-                    RouteEventKind.DEVICE_ADDED,
-                    "${device.productName?.toString().orEmpty().ifBlank { "Unknown" }} (${device.type.audioTypeLabel})"
-                )
+                emit(RouteEventKind.DEVICE_ADDED, formatDevice(device))
             }
         }
 
         override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
             removedDevices.forEach { device ->
-                emit(
-                    RouteEventKind.DEVICE_REMOVED,
-                    "${device.productName?.toString().orEmpty().ifBlank { "Unknown" }} (${device.type.audioTypeLabel})"
-                )
+                emit(RouteEventKind.DEVICE_REMOVED, formatDevice(device))
             }
         }
     }
@@ -61,8 +60,7 @@ class RouteMonitor(context: Context) {
         AudioManager.OnCommunicationDeviceChangedListener { device ->
             emit(
                 RouteEventKind.COMMUNICATION_DEVICE_CHANGED,
-                device?.let { d -> "${d.productName?.toString().orEmpty().ifBlank { "Unknown" }} (${d.type.audioTypeLabel})" }
-                    ?: "cleared (system default)"
+                device?.let(::formatDevice) ?: "cleared (system default)"
             )
         }
 

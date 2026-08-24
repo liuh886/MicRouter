@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -30,6 +31,7 @@ import com.liuh886.microuter.core.model.AudioDeviceItem
 import com.liuh886.microuter.data.AudioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 class MicTestViewModel(
     private val repository: AudioRepository,
@@ -51,24 +53,26 @@ class MicTestViewModel(
     init {
         viewModelScope.launch {
             repository.state.collect { state ->
-                _uiState.value = _uiState.value.copy(
-                    inputs = state.inputs,
-                    selected = _uiState.value.selected?.let { sel ->
-                        state.inputs.firstOrNull { it.id == sel.id }
-                    }
-                )
+                _uiState.update { current ->
+                    current.copy(
+                        inputs = state.inputs,
+                        selected = current.selected?.let { sel ->
+                            state.inputs.firstOrNull { it.id == sel.id }
+                        }
+                    )
+                }
             }
         }
     }
 
     fun select(device: AudioDeviceItem) {
-        _uiState.value = _uiState.value.copy(selected = device)
+        _uiState.update { it.copy(selected = device, error = null) }
     }
 
     fun toggle() {
         if (tester.isRunning) {
             tester.stop()
-            _uiState.value = _uiState.value.copy(running = false, level = 0f, sessionInfo = null)
+            _uiState.update { it.copy(running = false, level = 0f, sessionInfo = null) }
             return
         }
         val selectedId = _uiState.value.selected?.id ?: run {
@@ -80,13 +84,21 @@ class MicTestViewModel(
             _uiState.value = _uiState.value.copy(error = "Device is no longer available")
             return
         }
-        val info = tester.start(device) { level, session ->
-            _uiState.value = _uiState.value.copy(level = level, sessionInfo = session)
+        val info = try {
+            tester.start(device) { level, session ->
+                _uiState.update { it.copy(level = level, sessionInfo = session) }
+            }
+        } catch (_: SecurityException) {
+            null
+        } catch (_: UnsupportedOperationException) {
+            null
         }
-        _uiState.value = if (info != null) {
-            _uiState.value.copy(running = true, error = null, sessionInfo = info)
-        } else {
-            _uiState.value.copy(error = "Failed to open AudioRecord")
+        _uiState.update { current ->
+            if (info != null) {
+                current.copy(running = true, error = null, sessionInfo = info)
+            } else {
+                current.copy(running = false, error = "Failed to open AudioRecord for this device")
+            }
         }
     }
 
@@ -106,7 +118,10 @@ fun MicTestScreen(
     val viewModel: MicTestViewModel = viewModel { MicTestViewModel(repository, tester) }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Text("Microphone test", style = MaterialTheme.typography.titleLarge)
         if (!micPermissionGranted) {
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -134,7 +149,10 @@ fun MicTestScreen(
             Text(if (state.running) "Stop" else "Start")
         }
         Text("Input devices", style = MaterialTheme.typography.titleMedium)
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
             items(state.inputs, key = { it.id }) { device ->
                 Card(
                     modifier = Modifier.fillMaxWidth().clickable { viewModel.select(device) }

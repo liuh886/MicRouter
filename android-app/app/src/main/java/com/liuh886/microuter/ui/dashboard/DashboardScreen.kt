@@ -2,7 +2,9 @@ package com.liuh886.microuter.ui.dashboard
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,10 +20,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewModelScope
 import com.liuh886.microuter.core.model.AudioDeviceItem
 import com.liuh886.microuter.data.AudioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class DashboardViewModel(private val repository: AudioRepository) : ViewModel() {
 
@@ -30,16 +34,17 @@ class DashboardViewModel(private val repository: AudioRepository) : ViewModel() 
 
     init {
         repository.refresh()
+        viewModelScope.launch {
+            repository.state.collect { _status.value = it }
+        }
     }
 
     fun select(device: AudioDeviceItem) {
         repository.selectCommunicationDevice(device.id)
-        _status.value = repository.state.value
     }
 
     fun clear() {
         repository.clearCommunicationSelection()
-        _status.value = repository.state.value
     }
 }
 
@@ -49,8 +54,9 @@ fun DashboardScreen(repository: AudioRepository) {
     val state by viewModel.status.collectAsStateWithLifecycle()
 
     LazyColumn(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(bottom = 8.dp)
     ) {
         item {
             Card(modifier = Modifier.fillMaxWidth()) {

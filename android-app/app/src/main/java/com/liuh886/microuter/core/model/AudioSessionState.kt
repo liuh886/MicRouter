@@ -1,5 +1,8 @@
 package com.liuh886.microuter.core.model
 
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
+
 data class AudioSessionState(
     val modeLabel: String = MODE_NORMAL_LABEL,
     val communicationDevice: AudioDeviceItem? = null,
@@ -9,8 +12,8 @@ data class AudioSessionState(
 ) {
     val isBluetoothCommunication: Boolean
         get() = communicationDevice?.let {
-            it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
-                it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET
+            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                it.type == AudioDeviceInfo.TYPE_BLE_HEADSET
         } == true
 
     companion object {
@@ -21,10 +24,10 @@ data class AudioSessionState(
         const val MODE_UNKNOWN_LABEL = "UNKNOWN"
 
         fun labelForMode(mode: Int): String = when (mode) {
-            android.media.AudioManager.MODE_NORMAL -> MODE_NORMAL_LABEL
-            android.media.AudioManager.MODE_RINGTONE -> MODE_RINGTONE_LABEL
-            android.media.AudioManager.MODE_IN_CALL -> MODE_IN_CALL_LABEL
-            android.media.AudioManager.MODE_IN_COMMUNICATION -> MODE_IN_COMMUNICATION_LABEL
+            AudioManager.MODE_NORMAL -> MODE_NORMAL_LABEL
+            AudioManager.MODE_RINGTONE -> MODE_RINGTONE_LABEL
+            AudioManager.MODE_IN_CALL -> MODE_IN_CALL_LABEL
+            AudioManager.MODE_IN_COMMUNICATION -> MODE_IN_COMMUNICATION_LABEL
             else -> "$MODE_UNKNOWN_LABEL ($mode)"
         }
     }
