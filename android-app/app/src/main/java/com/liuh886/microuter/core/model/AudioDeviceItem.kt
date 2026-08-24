@@ -1,6 +1,7 @@
 package com.liuh886.microuter.core.model
 
 import android.media.AudioDeviceInfo
+import android.os.Build
 
 data class AudioDeviceItem(
     val id: Int,
@@ -29,6 +30,7 @@ val Int.audioTypeLabel: String
         AudioDeviceInfo.TYPE_BLE_SPEAKER -> "Bluetooth LE speaker"
         AudioDeviceInfo.TYPE_TELEPHONY -> "Telephony"
         AudioDeviceInfo.TYPE_FM_TUNER -> "FM tuner"
+        AudioDeviceInfo.TYPE_REMOTE_SUBMIX -> "Remote submix"
         AudioDeviceInfo.TYPE_HDMI -> "HDMI"
         AudioDeviceInfo.TYPE_DOCK -> "Dock"
         else -> "Type $this"
@@ -36,12 +38,20 @@ val Int.audioTypeLabel: String
 
 fun AudioDeviceInfo.toItem(isCommunicationCandidate: Boolean = false): AudioDeviceItem {
     val rawName = productName?.toString().orEmpty()
+    val isModelName = rawName.isBlank() || rawName.equals(Build.MODEL, ignoreCase = true)
+    val base = if (isModelName) type.audioTypeLabel else rawName
+    val location = address.orEmpty()
+    val name = if (isModelName && location.isNotBlank() && location != "0") {
+        "$base ($location)"
+    } else {
+        base
+    }
     return AudioDeviceItem(
         id = id,
-        name = rawName.ifBlank { type.audioTypeLabel },
+        name = name,
         typeLabel = type.audioTypeLabel,
         type = type,
-        address = address.orEmpty(),
+        address = location,
         isSource = isSource,
         isSink = isSink,
         isCommunicationCandidate = isCommunicationCandidate
