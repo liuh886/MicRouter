@@ -115,13 +115,13 @@ fun DashboardScreen(repository: AudioRepository) {
                     Chevron()
                 }
                 ListRow(
-                    title = "System",
-                    subtitle = "Mode: ${state.modeLabel}",
+                    title = "Live Status",
+                    subtitle = "Mode: ${state.modeLabel} · BT mic link ${if (state.btMicLinkUp) "UP" else "down"}",
                     showDivider = false
                 ) {
                     StatusPill(
-                        text = if (state.isBluetoothCommunication) "BT call" else "Auto",
-                        color = if (state.isBluetoothCommunication) {
+                        text = if (state.btMicLinkUp) "SCO UP" else "NO LINK",
+                        color = if (state.btMicLinkUp) {
                             MaterialTheme.colorScheme.tertiary
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant

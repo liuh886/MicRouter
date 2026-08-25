@@ -8,7 +8,8 @@ data class AudioSessionState(
     val communicationDevice: AudioDeviceItem? = null,
     val inputs: List<AudioDeviceItem> = emptyList(),
     val outputs: List<AudioDeviceItem> = emptyList(),
-    val communicationCandidates: List<AudioDeviceItem> = emptyList()
+    val communicationCandidates: List<AudioDeviceItem> = emptyList(),
+    val btMicLinkUp: Boolean = false
 ) {
     val isBluetoothCommunication: Boolean
         get() = communicationDevice?.let {

@@ -138,7 +138,7 @@ fun MicTestScreen(
             }
             ListRow(
                 title = "System Route",
-                subtitle = "Mode: ${state.modeLabel}",
+                subtitle = "Mode: ${state.modeLabel} · BT mic link ${if (state.btMicLinkUp) "UP" else "down"}",
                 showDivider = false
             ) {
                 Text(

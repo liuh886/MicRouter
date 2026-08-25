@@ -27,7 +27,8 @@ class MicTestViewModel(
         val earMonitor: Boolean = false,
         val monitorName: String? = null,
         val modeLabel: String = "NORMAL",
-        val systemComm: AudioDeviceItem? = null
+        val systemComm: AudioDeviceItem? = null,
+        val btMicLinkUp: Boolean = false
     )
 
     private val _uiState = MutableStateFlow(UiState(selected = repository.selectedInput.value))
@@ -46,7 +47,8 @@ class MicTestViewModel(
                         inputs = state.inputs,
                         outputs = state.outputs,
                         modeLabel = state.modeLabel,
-                        systemComm = state.communicationDevice
+                        systemComm = state.communicationDevice,
+                        btMicLinkUp = state.btMicLinkUp
                     )
                 }
             }

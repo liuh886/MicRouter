@@ -27,6 +27,10 @@ class AudioRepository(
 ) {
     private val appContext = context.applicationContext
     private val reportBuilder = DiagnosticReportBuilder(appContext)
+    private val audioManager = appContext.getSystemService(AudioManager::class.java)
+
+    @Volatile
+    private var started = false
 
     private val deviceIndex = mutableMapOf<Int, AudioDeviceInfo>()
 
@@ -43,8 +47,6 @@ class AudioRepository(
         _selectedInput.value = item
     }
 
-    private var started = false
-
     fun start() {
         if (started) return
         started = true
@@ -60,6 +62,12 @@ class AudioRepository(
                 ) {
                     refresh()
                 }
+            }
+        }
+        scope.launch {
+            while (started) {
+                kotlinx.coroutines.delay(POLL_INTERVAL_MS)
+                if (started) refresh()
             }
         }
         monitor.start()
@@ -80,12 +88,20 @@ class AudioRepository(
         val candidates = controller.candidates()
         val candidateIds = candidates.map { it.id }.toSet()
         val current = controller.current()
+        val currentMode = mode()
+        @Suppress("DEPRECATION")
+        val scoTransportUp = audioManager.isBluetoothScoOn
+        val commIsBt = current != null && (
+            current.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                current.type == AudioDeviceInfo.TYPE_BLE_HEADSET
+            )
         val state = AudioSessionState(
-            modeLabel = AudioSessionState.labelForMode(mode()),
+            modeLabel = AudioSessionState.labelForMode(currentMode),
             communicationDevice = current?.let { it.toItem(candidateIds.contains(it.id)) },
             inputs = scanner.inputDevices().map { it.toItem(candidateIds.contains(it.id)) },
             outputs = scanner.outputDevices().map { it.toItem(candidateIds.contains(it.id)) },
-            communicationCandidates = candidates.map { it.toItem(true) }
+            communicationCandidates = candidates.map { it.toItem(true) },
+            btMicLinkUp = scoTransportUp || (commIsBt && currentMode != AudioManager.MODE_NORMAL)
         )
         _state.value = state
         return state
@@ -138,10 +154,10 @@ class AudioRepository(
         controller.setMode(AudioManager.MODE_NORMAL)
     }
 
-    private fun mode(): Int =
-        appContext.getSystemService(AudioManager::class.java).mode
+    private fun mode(): Int = audioManager.mode
 
     private companion object {
         const val LINK_CONFIRM_TIMEOUT_MS = 2_000L
+        const val POLL_INTERVAL_MS = 2_000L
     }
 }
