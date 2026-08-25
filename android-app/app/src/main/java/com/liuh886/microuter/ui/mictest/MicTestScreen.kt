@@ -198,6 +198,7 @@ fun MicTestScreen(
             selectedId = selected?.id,
             allowPick = { it.recordable },
             disabledTag = "not recordable",
+            allowedTag = "test input",
             onPick = { device ->
                 viewModel.selectDevice(device)
                 showInputSheet = false

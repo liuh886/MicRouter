@@ -308,6 +308,7 @@ fun DevicePickerSheet(
     selectedId: Int?,
     allowPick: (AudioDeviceItem) -> Boolean = { true },
     disabledTag: String = "system-only",
+    allowedTag: String = "controllable",
     onPick: (AudioDeviceItem) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -348,7 +349,7 @@ fun DevicePickerSheet(
                             )
                         } else if (device.isCommunicationCandidate) {
                             Text(
-                                "controllable",
+                                allowedTag,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.tertiary
                             )

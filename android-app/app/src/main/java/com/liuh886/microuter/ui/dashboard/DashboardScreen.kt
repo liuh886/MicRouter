@@ -164,6 +164,7 @@ fun DashboardScreen(repository: AudioRepository) {
             selectedId = selectedInput?.id,
             allowPick = { it.recordable },
             disabledTag = "not recordable",
+            allowedTag = "sets call route",
             onPick = { device ->
                 viewModel.chooseInput(device)
                 showInputSheet = false
@@ -178,6 +179,7 @@ fun DashboardScreen(repository: AudioRepository) {
             selectedId = commDevice?.id,
             allowPick = { it.isCommunicationCandidate },
             disabledTag = "fixed",
+            allowedTag = "call route",
             onPick = { device ->
                 viewModel.chooseOutput(device)
                 showOutputSheet = false
