@@ -7,11 +7,66 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import com.liuh886.microuter.core.model.RecordedClip
 import com.liuh886.microuter.core.model.audioTypeLabel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 
 class MicTester(
     private val linkController: (AudioDeviceInfo?) -> Boolean
 ) {
+
+    val clipReady = MutableSharedFlow<RecordedClip>(extraBufferCapacity = 8)
+
+    private class CaptureState(
+        val deviceId: Int,
+        val deviceName: String,
+        val buffer: ShortArray,
+        var fill: Int = 0
+    )
+
+    private val captures = LinkedHashMap<Char, CaptureState>()
+    private val clipLock = Any()
+
+    @Volatile
+    private var lastRate = 0
+
+    fun beginCapture(slot: Char, deviceId: Int, deviceName: String): Boolean {
+        if (!running || lastRate <= 0) return false
+        val cap = lastRate * RecordedClip.MAX_SECONDS
+        synchronized(clipLock) {
+            captures[slot] = CaptureState(deviceId, deviceName, ShortArray(cap))
+        }
+        return true
+    }
+
+    fun endCapture(slot: Char) {
+        val pair = synchronized(clipLock) {
+            val st = captures.remove(slot)
+            st?.let { slot to it }
+        }
+        if (pair != null) finalizeCapture(pair.first, pair.second)
+    }
+
+    fun clipElapsedMs(slot: Char): Int = synchronized(clipLock) {
+        val st = captures[slot] ?: return 0
+        if (lastRate <= 0) 0 else (st.fill * 1000 / lastRate)
+    }
+
+    private fun finalizeCapture(slot: Char, st: CaptureState) {
+        if (st.fill == 0) return
+        val clip = RecordedClip.finalize(slot, st.deviceId, st.deviceName, st.buffer, st.fill, lastRate)
+        clipReady.tryEmit(clip)
+    }
+
+    private fun finalizeAllCaptures() {
+        val done = synchronized(clipLock) {
+            val c = LinkedHashMap(captures)
+            captures.clear()
+            c
+        }
+        done.forEach { (slot, st) -> finalizeCapture(slot, st) }
+    }
 
     data class SessionInfo(
         val sampleRate: Int,
@@ -65,6 +120,7 @@ class MicTester(
                 record = initial.record
                 track = initial.track
             }
+            lastRate = initial.info.sampleRate
             val buffer = ShortArray(initial.record.bufferSizeInFrames.coerceAtLeast(1024))
             var current: Setup = initial
             var currentSource = MediaRecorder.AudioSource.VOICE_COMMUNICATION
@@ -76,6 +132,7 @@ class MicTester(
                     pending = null
                     if (want.device?.id != cfg.device?.id || want.monitorOutput?.id != cfg.monitorOutput?.id) {
                         if (current.isBluetooth && !want.isBluetoothDevice()) linkController(null)
+                        finalizeAllCaptures()
                         closeSetup(current)
                         val next = openSetup(want)
                         if (next == null) {
@@ -89,6 +146,7 @@ class MicTester(
                             cfg = want
                             current = next
                             currentInfo = next.info
+                            lastRate = next.info.sampleRate
                             currentSource = MediaRecorder.AudioSource.VOICE_COMMUNICATION
                             fallbackDone = false
                             silentMs = 0f
@@ -135,6 +193,20 @@ class MicTester(
                 }
                 val rms = kotlin.math.sqrt(sum / read)
                 val level = (rms * LEVEL_GAIN).toFloat().coerceIn(0f, 1f)
+                val captureSnapshot = synchronized(clipLock) { captures.toMap() }
+                if (captureSnapshot.isNotEmpty()) {
+                    for ((slot, st) in captureSnapshot) {
+                        val n = minOf(read, st.buffer.size - st.fill)
+                        if (n > 0) {
+                            System.arraycopy(buffer, 0, st.buffer, st.fill, n)
+                            st.fill += n
+                        }
+                        if (st.fill >= st.buffer.size) {
+                            synchronized(clipLock) { captures.remove(slot) }
+                            finalizeCapture(slot, st)
+                        }
+                    }
+                }
                 val routedNow = routedLabel(rec.routedDevice)
                 if (routedNow != currentInfo.routedDeviceName) {
                     currentInfo = currentInfo.copy(routedDeviceName = routedNow)
@@ -156,6 +228,7 @@ class MicTester(
         pending = null
         worker?.join(JOIN_TIMEOUT_MS)
         worker = null
+        finalizeAllCaptures()
         synchronized(lock) {
             record = null
             track = null

@@ -2,6 +2,7 @@ package com.liuh886.microuter
 
 import android.app.Application
 import com.liuh886.microuter.audio.AudioDeviceScanner
+import com.liuh886.microuter.audio.ClipPlayer
 import com.liuh886.microuter.audio.CommunicationController
 import com.liuh886.microuter.audio.MicTester
 import com.liuh886.microuter.audio.RouteMonitor
@@ -24,6 +25,7 @@ class MicRouterApp : Application() {
     val communicationController: CommunicationController by lazy { CommunicationController(this) }
     val routeMonitor: RouteMonitor by lazy { RouteMonitor(this) }
     val eventLogger: RouteEventLogger by lazy { RouteEventLogger() }
+    val clipPlayer: ClipPlayer by lazy { ClipPlayer() }
     val micTester: MicTester by lazy {
         MicTester { device ->
             if (device != null) {

@@ -12,7 +12,11 @@ class CommunicationController(context: Context) {
 
     fun candidates(): List<AudioDeviceInfo> = audioManager.availableCommunicationDevices
 
-    fun select(device: AudioDeviceInfo): Boolean = audioManager.setCommunicationDevice(device)
+    fun select(device: AudioDeviceInfo): Boolean {
+        val active = audioManager.communicationDevice
+        if (active != null && active.id == device.id) return true
+        return audioManager.setCommunicationDevice(device)
+    }
 
     fun clear() {
         audioManager.clearCommunicationDevice()

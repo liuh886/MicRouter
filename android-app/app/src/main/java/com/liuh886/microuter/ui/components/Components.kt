@@ -221,6 +221,43 @@ fun LevelTrack(level: Float) {
     }
 }
 
+@Composable
+fun CompareBar(fraction: Float, accent: Color = MaterialTheme.colorScheme.primary) {
+    val animated by animateFloatAsState(targetValue = fraction.coerceIn(0f, 1f), label = "compare")
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(12.dp)
+            .clip(RoundedCornerShape(percent = 50))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(animated)
+                .height(12.dp)
+                .clip(RoundedCornerShape(percent = 50))
+                .background(accent)
+        )
+    }
+}
+
+@Composable
+fun SlotBadge(slot: Char) {
+    Box(
+        modifier = Modifier
+            .size(26.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            slot.toString(),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
 private data class Glyph(val icon: ImageVector, val accent: Color)
 
 @Composable

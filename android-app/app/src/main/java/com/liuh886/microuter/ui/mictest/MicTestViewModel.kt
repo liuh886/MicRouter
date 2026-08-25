@@ -3,8 +3,10 @@ package com.liuh886.microuter.ui.mictest
 import android.media.AudioDeviceInfo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.liuh886.microuter.audio.ClipPlayer
 import com.liuh886.microuter.audio.MicTester
 import com.liuh886.microuter.core.model.AudioDeviceItem
+import com.liuh886.microuter.core.model.RecordedClip
 import com.liuh886.microuter.data.AudioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,7 +15,8 @@ import kotlinx.coroutines.launch
 
 class MicTestViewModel(
     private val repository: AudioRepository,
-    private val tester: MicTester
+    private val tester: MicTester,
+    private val clipPlayer: ClipPlayer
 ) : ViewModel() {
 
     data class UiState(
@@ -29,7 +32,12 @@ class MicTestViewModel(
         val modeLabel: String = "NORMAL",
         val systemComm: AudioDeviceItem? = null,
         val btMicLinkUp: Boolean = false,
-        val monitorOutputId: Int? = null
+        val monitorOutputId: Int? = null,
+        val clipA: RecordedClip? = null,
+        val clipB: RecordedClip? = null,
+        val captureSlot: Char? = null,
+        val captureSeconds: Int = 0,
+        val playingSlot: Char? = null
     )
 
     private val _uiState = MutableStateFlow(UiState(selected = repository.selectedInput.value))
@@ -66,6 +74,17 @@ class MicTestViewModel(
                 }
             }
         }
+        viewModelScope.launch {
+            tester.clipReady.collect { clip ->
+                _uiState.update { current ->
+                    current.copy(
+                        clipA = if (clip.slot == 'A') clip else current.clipA,
+                        clipB = if (clip.slot == 'B') clip else current.clipB,
+                        captureSlot = if (current.captureSlot == clip.slot) null else current.captureSlot
+                    )
+                }
+            }
+        }
     }
 
     fun selectDevice(device: AudioDeviceItem) {
@@ -93,7 +112,7 @@ class MicTestViewModel(
         if (_uiState.value.running) {
             tester.stop()
             repository.endLink()
-            _uiState.update { it.copy(running = false, level = 0f, sessionInfo = null) }
+            _uiState.update { it.copy(running = false, level = 0f, sessionInfo = null, captureSlot = null) }
             return
         }
         val selected = _uiState.value.selected
@@ -120,10 +139,63 @@ class MicTestViewModel(
         tester.start(
             MicTester.Config(device, monitor),
             onLevel = { level, info ->
-                _uiState.update { it.copy(level = level, sessionInfo = info) }
+                _uiState.update { cur ->
+                    cur.copy(
+                        level = level,
+                        sessionInfo = info,
+                        captureSeconds = if (cur.captureSlot != null) {
+                            tester.clipElapsedMs(cur.captureSlot) / 1000
+                        } else {
+                            cur.captureSeconds
+                        }
+                    )
+                }
             },
             onError = { msg ->
                 _uiState.update { it.copy(error = msg, running = false, sessionInfo = null) }
+            }
+        )
+    }
+
+    fun toggleCapture(slot: Char) {
+        val current = _uiState.value
+        if (current.captureSlot == slot) {
+            tester.endCapture(slot)
+            _uiState.update { it.copy(captureSlot = null) }
+            return
+        }
+        if (!current.running) {
+            _uiState.update { it.copy(error = "Press Start first") }
+            return
+        }
+        current.captureSlot?.let { tester.endCapture(it) }
+        val device = current.selected?.let { repository.resolveInputDevice(it.id) }
+        if (device == null) {
+            _uiState.update { it.copy(error = "Device is no longer available") }
+            return
+        }
+        val name = current.selected?.name ?: "Input"
+        val ok = tester.beginCapture(slot, device.id, name)
+        _uiState.update {
+            if (ok) it.copy(captureSlot = slot, error = null)
+            else it.copy(error = "Cannot start capture")
+        }
+    }
+
+    fun playSlot(slot: Char) {
+        if (_uiState.value.playingSlot != null) {
+            clipPlayer.stop()
+            _uiState.update { it.copy(playingSlot = null) }
+            if (_uiState.value.playingSlot == slot) return
+        }
+        val clip = (if (slot == 'A') _uiState.value.clipA else _uiState.value.clipB) ?: return
+        _uiState.update { it.copy(playingSlot = slot) }
+        clipPlayer.play(
+            clip,
+            resolveMonitor(),
+            onDone = { _uiState.update { it.copy(playingSlot = null) } },
+            onError = { msg ->
+                _uiState.update { it.copy(playingSlot = null, error = msg) }
             }
         )
     }
@@ -159,6 +231,7 @@ class MicTestViewModel(
 
     override fun onCleared() {
         tester.stop()
+        clipPlayer.stop()
         repository.endLink()
         super.onCleared()
     }

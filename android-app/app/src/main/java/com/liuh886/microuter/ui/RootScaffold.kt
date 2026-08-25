@@ -84,6 +84,7 @@ fun RootScaffold(
                 MicTestScreen(
                     repository = app.audioRepository,
                     tester = app.micTester,
+                    clipPlayer = app.clipPlayer,
                     micPermissionGranted = micPermissionGranted,
                     onRequestMicPermission = onRequestMicPermission
                 )
@@ -93,12 +94,20 @@ fun RootScaffold(
                     repository = app.audioRepository,
                     onOpenLog = {
                         navController.navigate("log") { launchSingleTop = true }
+                    },
+                    onOpenPrivacy = {
+                        navController.navigate("privacy") { launchSingleTop = true }
                     }
                 )
             }
             composable("log") {
                 InspectorScreen(
                     repository = app.audioRepository,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable("privacy") {
+                com.liuh886.microuter.ui.privacy.PrivacyScreen(
                     onBack = { navController.popBackStack() }
                 )
             }

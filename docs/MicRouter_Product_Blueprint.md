@@ -10,6 +10,7 @@ Companion documents:
 - Android_Audio_Routing_Research.md — API investigation details
 - Phase_Completion_Report.md — engineering progress log
 - Product_Design_Handoff.md — original design handoff record (historical)
+- Release_Scope_v1.md — v1.0 release contract (hero positioning + in/out scope)
 
 ---
 
@@ -164,7 +165,8 @@ Features:
 3. Microphone Self-Test
    - Level meter (RMS) recorded from a chosen input
    - Sample rate / channel info
-   - Comparison mode: run same test against two inputs side by side
+   - Record/playback: bounded in-memory clip, immediate playback to listen output
+   - Comparison mode (A/B): record two inputs, side-by-side level + per-clip playback (see Release_Scope_v1.md)
 4. Diagnostic Export
    - One-tap package: device inventory + timeline + test results + build info
 

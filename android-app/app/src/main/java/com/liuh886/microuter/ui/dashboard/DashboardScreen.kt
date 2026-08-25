@@ -65,7 +65,11 @@ class DashboardViewModel(private val repository: AudioRepository) : ViewModel() 
 }
 
 @Composable
-fun DashboardScreen(repository: AudioRepository, onOpenLog: () -> Unit = {}) {
+fun DashboardScreen(
+    repository: AudioRepository,
+    onOpenLog: () -> Unit = {},
+    onOpenPrivacy: () -> Unit = {}
+) {
     val viewModel: DashboardViewModel = viewModel { DashboardViewModel(repository) }
     val state by viewModel.status.collectAsStateWithLifecycle()
     val selectedInput by repository.selectedInput.collectAsStateWithLifecycle()
@@ -141,6 +145,9 @@ fun DashboardScreen(repository: AudioRepository, onOpenLog: () -> Unit = {}) {
                 }
                 TextButton(onClick = onOpenLog) {
                     Text("Route log →")
+                }
+                TextButton(onClick = onOpenPrivacy) {
+                    Text("Privacy")
                 }
             }
         }

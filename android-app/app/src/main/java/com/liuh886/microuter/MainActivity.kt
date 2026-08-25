@@ -1,6 +1,7 @@
 package com.liuh886.microuter
 
 import android.Manifest
+import android.content.Context.MODE_PRIVATE
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,12 +13,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.liuh886.microuter.ui.RootScaffold
+import com.liuh886.microuter.ui.onboarding.OnboardingScreen
 import com.liuh886.microuter.ui.theme.AppBackdrop
 import com.liuh886.microuter.ui.theme.MicRouterTheme
 
 class MainActivity : ComponentActivity() {
 
     private var micPermissionGranted by mutableStateOf(false)
+
+    private var showOnboarding by mutableStateOf(false)
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -29,15 +33,25 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val app = application as MicRouterApp
         app.audioRepository.start()
+        showOnboarding = !getSharedPreferences("microuter", MODE_PRIVATE)
+            .getBoolean("onboarded", false)
         requestNeededPermissions()
         setContent {
             MicRouterTheme {
-                AppBackdrop {
-                    RootScaffold(
-                        app = app,
-                        micPermissionGranted = micPermissionGranted,
-                        onRequestMicPermission = { requestNeededPermissions() }
-                    )
+                if (showOnboarding) {
+                    OnboardingScreen(onDone = {
+                        getSharedPreferences("microuter", MODE_PRIVATE).edit()
+                            .putBoolean("onboarded", true).apply()
+                        showOnboarding = false
+                    })
+                } else {
+                    AppBackdrop {
+                        RootScaffold(
+                            app = app,
+                            micPermissionGranted = micPermissionGranted,
+                            onRequestMicPermission = { requestNeededPermissions() }
+                        )
+                    }
                 }
             }
         }

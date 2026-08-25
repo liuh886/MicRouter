@@ -127,10 +127,12 @@ class AudioRepository(
         reportBuilder.build(refresh(), logger.export())
 
     fun beginLink(device: AudioDeviceInfo): Boolean {
+        if (snapshotMode == null) snapshotMode = audioManager.mode
+        if (snapshotComm == null) snapshotComm = audioManager.communicationDevice
         controller.setMode(AudioManager.MODE_IN_COMMUNICATION)
         val selected = controller.select(device)
         if (!selected) {
-            controller.setMode(AudioManager.MODE_NORMAL)
+            restoreSnapshot()
             return false
         }
         val isBtTarget = device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
@@ -151,7 +153,21 @@ class AudioRepository(
 
     fun endLink() {
         controller.clear()
-        controller.setMode(AudioManager.MODE_NORMAL)
+        restoreSnapshot()
+    }
+
+    private var snapshotMode: Int? = null
+    private var snapshotComm: AudioDeviceInfo? = null
+
+    private fun restoreSnapshot() {
+        val mode = snapshotMode ?: AudioManager.MODE_NORMAL
+        val comm = snapshotComm
+        snapshotMode = null
+        snapshotComm = null
+        if (comm != null) {
+            controller.select(comm)
+        }
+        controller.setMode(mode)
     }
 
     private fun mode(): Int = audioManager.mode

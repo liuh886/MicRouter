@@ -37,6 +37,12 @@ When documents conflict, the Blueprint wins.
 - Product_Design_Handoff.md (historical record)
   - Original design handoff; superseded by Blueprint for product decisions
 
+- Release_Scope_v1.md
+  - v1.0 release contract: hero positioning (test-bench-first) + A/B record/playback spec + in/out scope + release hygiene
+
+- Record_Playback_Implementation_Plan.md
+  - v1.0 hero feature implementation: benchmark (twilio/audioswitch) + record/playback engine design + A/B compare phases + file change map
+
 Removed after merge into Blueprint:
 
 - MVP_Product_Model.md

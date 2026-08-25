@@ -13,12 +13,22 @@ android {
         minSdk = 31
         targetSdk = 34
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("../microuter.keystore")
+            storePassword = "microuter2026"
+            keyAlias = "microuter"
+            keyPassword = "microuter2026"
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
