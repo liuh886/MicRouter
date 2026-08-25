@@ -28,7 +28,8 @@ class MicTestViewModel(
         val monitorName: String? = null,
         val modeLabel: String = "NORMAL",
         val systemComm: AudioDeviceItem? = null,
-        val btMicLinkUp: Boolean = false
+        val btMicLinkUp: Boolean = false,
+        val monitorOutputId: Int? = null
     )
 
     private val _uiState = MutableStateFlow(UiState(selected = repository.selectedInput.value))
@@ -74,6 +75,19 @@ class MicTestViewModel(
     fun selectOutput(device: AudioDeviceItem) {
         repository.selectCommunicationDevice(device.id)
     }
+
+    fun selectMonitorOutput(device: AudioDeviceItem) {
+        _uiState.update { it.copy(monitorOutputId = device.id, monitorName = device.name) }
+        if (_uiState.value.running) {
+            val input = _uiState.value.selected?.let { repository.resolveInputDevice(it.id) }
+            if (input != null) {
+                tester.switch(MicTester.Config(input, resolveMonitor()))
+            }
+        }
+    }
+
+    fun isMonitorCapable(device: AudioDeviceItem): Boolean =
+        device.type in MONITOR_TYPES || device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
 
     fun toggleRun() {
         if (_uiState.value.running) {
@@ -136,6 +150,9 @@ class MicTestViewModel(
 
     private fun monitorCandidate(): AudioDeviceItem? {
         val outputs = _uiState.value.outputs
+        _uiState.value.monitorOutputId?.let { chosen ->
+            outputs.firstOrNull { it.id == chosen }?.let { return it }
+        }
         return outputs.firstOrNull { it.type in MONITOR_TYPES }
             ?: outputs.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
     }
@@ -146,7 +163,7 @@ class MicTestViewModel(
         super.onCleared()
     }
 
-    private companion object {
+    companion object {
         val MONITOR_TYPES = setOf(
             AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
             AudioDeviceInfo.TYPE_WIRED_HEADSET,

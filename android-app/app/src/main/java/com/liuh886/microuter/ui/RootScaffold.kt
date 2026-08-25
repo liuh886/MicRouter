@@ -35,9 +35,9 @@ private data class Tab(
 )
 
 private val tabs = listOf(
-    Tab("dashboard", "Dashboard", Icons.Filled.Speaker),
-    Tab("inspector", "Inspector", Icons.Filled.History),
-    Tab("mictest", "Mic Test", Icons.Filled.Mic)
+    Tab("monitor", "Monitor", Icons.Filled.Mic),
+    Tab("devices", "Devices", Icons.Filled.Speaker),
+    Tab("log", "Log", Icons.Filled.History)
 )
 
 @Composable
@@ -77,21 +77,29 @@ fun RootScaffold(
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = "dashboard",
+            startDestination = "monitor",
             modifier = Modifier.padding(padding)
         ) {
-            composable("dashboard") {
-                DashboardScreen(repository = app.audioRepository)
-            }
-            composable("inspector") {
-                InspectorScreen(repository = app.audioRepository)
-            }
-            composable("mictest") {
+            composable("monitor") {
                 MicTestScreen(
                     repository = app.audioRepository,
                     tester = app.micTester,
                     micPermissionGranted = micPermissionGranted,
                     onRequestMicPermission = onRequestMicPermission
+                )
+            }
+            composable("devices") {
+                DashboardScreen(
+                    repository = app.audioRepository,
+                    onOpenLog = {
+                        navController.navigate("log") { launchSingleTop = true }
+                    }
+                )
+            }
+            composable("log") {
+                InspectorScreen(
+                    repository = app.audioRepository,
+                    onBack = { navController.popBackStack() }
                 )
             }
         }

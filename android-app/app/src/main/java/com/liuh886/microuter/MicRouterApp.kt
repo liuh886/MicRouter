@@ -13,6 +13,11 @@ import kotlinx.coroutines.SupervisorJob
 
 class MicRouterApp : Application() {
 
+    override fun onCreate() {
+        super.onCreate()
+        audioRepository.start()
+    }
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val scanner: AudioDeviceScanner by lazy { AudioDeviceScanner(this) }

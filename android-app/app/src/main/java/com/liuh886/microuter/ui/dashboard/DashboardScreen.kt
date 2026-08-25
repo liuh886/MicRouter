@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -64,7 +65,7 @@ class DashboardViewModel(private val repository: AudioRepository) : ViewModel() 
 }
 
 @Composable
-fun DashboardScreen(repository: AudioRepository) {
+fun DashboardScreen(repository: AudioRepository, onOpenLog: () -> Unit = {}) {
     val viewModel: DashboardViewModel = viewModel { DashboardViewModel(repository) }
     val state by viewModel.status.collectAsStateWithLifecycle()
     val selectedInput by repository.selectedInput.collectAsStateWithLifecycle()
@@ -131,9 +132,15 @@ fun DashboardScreen(repository: AudioRepository) {
             }
         }
         item {
-            Box(Modifier.fillParentMaxWidth(), contentAlignment = Alignment.Center) {
+            Row(
+                Modifier.fillParentMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
                 TextButton(onClick = { viewModel.clear() }) {
                     Text("Reset to System Default")
+                }
+                TextButton(onClick = onOpenLog) {
+                    Text("Route log →")
                 }
             }
         }

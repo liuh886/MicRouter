@@ -28,13 +28,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liuh886.microuter.audio.MicTester
 import com.liuh886.microuter.data.AudioRepository
 import com.liuh886.microuter.ui.components.CapsuleButton
-import com.liuh886.microuter.ui.components.CheckTrailing
+import com.liuh886.microuter.ui.components.Chevron
 import com.liuh886.microuter.ui.components.DeviceGlyph
 import com.liuh886.microuter.ui.components.DevicePickerSheet
-import com.liuh886.microuter.ui.components.GroupHeader
 import com.liuh886.microuter.ui.components.LevelTrack
 import com.liuh886.microuter.ui.components.ListRow
-import com.liuh886.microuter.ui.components.PillAction
 import com.liuh886.microuter.ui.components.PulsingDot
 import com.liuh886.microuter.ui.theme.GlassCard
 
@@ -49,13 +47,14 @@ fun MicTestScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val selected = state.selected
     var showInputSheet by remember { mutableStateOf(false) }
+    var showOutputSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
-            "Mic Test",
+            "Monitor",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(start = 4.dp, top = 8.dp)
         )
@@ -137,6 +136,14 @@ fun MicTestScreen(
                 )
             }
             ListRow(
+                title = "Listen Output",
+                subtitle = state.monitorName?.let { "Manual: $it" } ?: "Auto (BT/wired first)",
+                showDivider = true,
+                onClick = { showOutputSheet = true }
+            ) {
+                Chevron()
+            }
+            ListRow(
                 title = "System Route",
                 subtitle = "Mode: ${state.modeLabel} · BT mic link ${if (state.btMicLinkUp) "UP" else "down"}",
                 showDivider = false
@@ -167,29 +174,6 @@ fun MicTestScreen(
                 )
             }
         }
-        GroupHeader("Outputs — call route")
-        GlassCard(cornerRadius = 20.dp) {
-            state.outputs.forEachIndexed { index, device ->
-                val isActive = state.systemComm?.id == device.id
-                ListRow(
-                    title = device.name,
-                    subtitle = device.typeLabel,
-                    leading = { DeviceGlyph(device.type) },
-                    showDivider = index < state.outputs.lastIndex,
-                    onClick = if (device.isCommunicationCandidate) {
-                        { viewModel.selectOutput(device) }
-                    } else {
-                        null
-                    }
-                ) {
-                    if (isActive) {
-                        CheckTrailing()
-                    } else if (device.isCommunicationCandidate) {
-                        PillAction("Use") { viewModel.selectOutput(device) }
-                    }
-                }
-            }
-        }
     }
     if (showInputSheet) {
         DevicePickerSheet(
@@ -204,6 +188,21 @@ fun MicTestScreen(
                 showInputSheet = false
             },
             onDismiss = { showInputSheet = false }
+        )
+    }
+    if (showOutputSheet) {
+        DevicePickerSheet(
+            title = "Listen Output — where you hear yourself",
+            devices = state.outputs,
+            selectedId = state.monitorOutputId,
+            allowPick = { viewModel.isMonitorCapable(it) },
+            disabledTag = "not monitorable",
+            allowedTag = "monitor out",
+            onPick = { device ->
+                viewModel.selectMonitorOutput(device)
+                showOutputSheet = false
+            },
+            onDismiss = { showOutputSheet = false }
         )
     }
 }

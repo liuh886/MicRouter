@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,7 +56,7 @@ class InspectorViewModel(private val repository: AudioRepository) : ViewModel() 
 }
 
 @Composable
-fun InspectorScreen(repository: AudioRepository) {
+fun InspectorScreen(repository: AudioRepository, onBack: () -> Unit = {}) {
     val viewModel: InspectorViewModel = viewModel { InspectorViewModel(repository) }
     val events by viewModel.events.collectAsStateWithLifecycle()
     val clipboard = LocalClipboardManager.current
@@ -60,16 +64,23 @@ fun InspectorScreen(repository: AudioRepository) {
 
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             verticalAlignment = Alignment.Bottom
         ) {
+            IconButton(onClick = onBack, modifier = Modifier.padding(end = 4.dp)) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
             Text(
-                "Inspector",
+                "Route Log",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f).padding(start = 4.dp)
+                modifier = Modifier.weight(1f)
             )
             TextButton(onClick = {
                 clipboard.setText(AnnotatedString(repository.diagnosticReport()))
