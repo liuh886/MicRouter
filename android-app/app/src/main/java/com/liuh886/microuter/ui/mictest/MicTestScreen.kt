@@ -122,7 +122,7 @@ fun MicTestScreen(
                 )
             }
             ListRow(
-                title = "Ear Monitor 耳返",
+                title = "Ear Monitor",
                 subtitle = if (state.earMonitor) {
                     "Via ${state.monitorName ?: "output"} · BT delay 100-300ms is normal"
                 } else {
