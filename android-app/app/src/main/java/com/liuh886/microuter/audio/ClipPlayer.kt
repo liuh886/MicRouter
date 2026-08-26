@@ -4,6 +4,7 @@ import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.os.SystemClock
 import com.liuh886.microuter.core.model.RecordedClip
 
 class ClipPlayer {
@@ -51,16 +52,8 @@ class ClipPlayer {
                     t = null
                 }
 
-                if (t != null) {
-                    t.write(clip.samples, 0, clip.samples.size)
-                    t.setPreferredDevice(output)
-                    t.play()
-                    synchronized(lock) { track = t }
-                    val headTarget = clip.samples.size
-                    while (playing && t.playbackHeadPosition < headTarget) {
-                        Thread.sleep(40)
-                    }
-                } else {
+                val useStatic = t != null
+                if (t == null) {
                     val bufSize = AudioTrack.getMinBufferSize(
                         clip.sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
                     )
@@ -68,26 +61,42 @@ class ClipPlayer {
                         onError("Playback unsupported on this device")
                         return@Thread
                     }
-                    val stream = AudioTrack.Builder()
+                    t = AudioTrack.Builder()
                         .setAudioAttributes(attrs)
                         .setAudioFormat(format)
                         .setTransferMode(AudioTrack.MODE_STREAM)
                         .setBufferSizeInBytes(bufSize)
                         .build()
-                    stream.setPreferredDevice(output)
-                    stream.play()
-                    synchronized(lock) { track = stream }
+                }
+                val player = t
+                player.setPreferredDevice(output)
+                val startMs = SystemClock.elapsedRealtime()
+                val deadlineMs = startMs + clip.durationMs.coerceAtLeast(1L) + COMPLETION_MARGIN_MS
+
+                if (useStatic) {
+                    player.write(clip.samples, 0, clip.samples.size)
+                    player.play()
+                    synchronized(lock) { track = player }
+                    while (playing && SystemClock.elapsedRealtime() < deadlineMs) {
+                        Thread.sleep(HEAD_POLL_MS)
+                    }
+                } else {
+                    player.play()
+                    synchronized(lock) { track = player }
                     var offset = 0
                     while (playing && offset < clip.samples.size) {
-                        val n = stream.write(
+                        val n = player.write(
                             clip.samples, offset,
-                            minOf(bufSize / 2, clip.samples.size - offset)
+                            minOf(2048, clip.samples.size - offset)
                         )
                         if (n < 0) {
                             onError("Playback failed")
                             return@Thread
                         }
                         offset += n
+                    }
+                    while (playing && SystemClock.elapsedRealtime() < deadlineMs) {
+                        Thread.sleep(HEAD_POLL_MS)
                     }
                 }
                 if (playing) onDone()
@@ -113,5 +122,6 @@ class ClipPlayer {
     private companion object {
         const val JOIN_TIMEOUT_MS = 2_000L
         const val HEAD_POLL_MS = 40L
+        const val COMPLETION_MARGIN_MS = 150L
     }
 }

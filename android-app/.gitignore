@@ -7,5 +7,6 @@
 /app/build
 /captures
 microuter.keystore
+keystore.properties
 .externalNativeBuild
 .cxx

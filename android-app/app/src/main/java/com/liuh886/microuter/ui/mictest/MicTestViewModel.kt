@@ -183,10 +183,11 @@ class MicTestViewModel(
     }
 
     fun playSlot(slot: Char) {
-        if (_uiState.value.playingSlot != null) {
+        val playingNow = _uiState.value.playingSlot
+        if (playingNow != null) {
             clipPlayer.stop()
             _uiState.update { it.copy(playingSlot = null) }
-            if (_uiState.value.playingSlot == slot) return
+            if (playingNow == slot) return
         }
         val clip = (if (slot == 'A') _uiState.value.clipA else _uiState.value.clipB) ?: return
         _uiState.update { it.copy(playingSlot = slot) }

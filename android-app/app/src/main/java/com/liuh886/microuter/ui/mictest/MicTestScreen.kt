@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -88,6 +89,26 @@ fun MicTestScreen(
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(start = 4.dp)
                 )
+            }
+        }
+        AnimatedVisibility(visible = state.sessionInfo?.linkConfirmed == false) {
+            val context = LocalContext.current
+            GlassCard(cornerRadius = 16.dp) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Bluetooth mic link not confirmed",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        "HyperOS may reject third-party call routing. The reliable fix: in Bluetooth settings, tap this headset and turn OFF its “Phone calls” (HFP) profile — calls stop using its mic. Media audio stays on.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    CapsuleButton("Open Bluetooth settings") {
+                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS))
+                    }
+                }
             }
         }
         GlassCard(cornerRadius = 24.dp) {

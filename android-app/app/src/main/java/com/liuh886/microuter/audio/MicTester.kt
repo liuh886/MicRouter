@@ -41,11 +41,8 @@ class MicTester(
     }
 
     fun endCapture(slot: Char) {
-        val pair = synchronized(clipLock) {
-            val st = captures.remove(slot)
-            st?.let { slot to it }
-        }
-        if (pair != null) finalizeCapture(pair.first, pair.second)
+        val st = synchronized(clipLock) { captures.remove(slot) } ?: return
+        finalizeCapture(slot, st)
     }
 
     fun clipElapsedMs(slot: Char): Int = synchronized(clipLock) {
@@ -54,18 +51,22 @@ class MicTester(
     }
 
     private fun finalizeCapture(slot: Char, st: CaptureState) {
-        if (st.fill == 0) return
-        val clip = RecordedClip.finalize(slot, st.deviceId, st.deviceName, st.buffer, st.fill, lastRate)
+        val clip = synchronized(clipLock) {
+            if (st.fill == 0) null
+            else RecordedClip.finalize(slot, st.deviceId, st.deviceName, st.buffer, st.fill, lastRate)
+        } ?: return
         clipReady.tryEmit(clip)
     }
 
     private fun finalizeAllCaptures() {
-        val done = synchronized(clipLock) {
-            val c = LinkedHashMap(captures)
-            captures.clear()
-            c
+        synchronized(clipLock) {
+            val iterator = captures.entries.iterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                iterator.remove()
+                finalizeCapture(entry.key, entry.value)
+            }
         }
-        done.forEach { (slot, st) -> finalizeCapture(slot, st) }
     }
 
     data class SessionInfo(
@@ -193,17 +194,19 @@ class MicTester(
                 }
                 val rms = kotlin.math.sqrt(sum / read)
                 val level = (rms * LEVEL_GAIN).toFloat().coerceIn(0f, 1f)
-                val captureSnapshot = synchronized(clipLock) { captures.toMap() }
-                if (captureSnapshot.isNotEmpty()) {
-                    for ((slot, st) in captureSnapshot) {
+                synchronized(clipLock) {
+                    val iterator = captures.entries.iterator()
+                    while (iterator.hasNext()) {
+                        val entry = iterator.next()
+                        val st = entry.value
                         val n = minOf(read, st.buffer.size - st.fill)
                         if (n > 0) {
                             System.arraycopy(buffer, 0, st.buffer, st.fill, n)
                             st.fill += n
                         }
                         if (st.fill >= st.buffer.size) {
-                            synchronized(clipLock) { captures.remove(slot) }
-                            finalizeCapture(slot, st)
+                            iterator.remove()
+                            finalizeCapture(entry.key, st)
                         }
                     }
                 }
