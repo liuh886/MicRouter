@@ -4,3 +4,4 @@ HANDOVER.md
 # OS
 Thumbs.db
 .DS_Store
+hs_err_pid*.log
